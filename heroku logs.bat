@@ -1,0 +1,1 @@
+heroku logs --tail --app mangamew-api
