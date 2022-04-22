@@ -5,8 +5,16 @@ from fastapi import Query
 from app import app
 import psycopg2
 from typing import List, Optional
+import os
 
-conn = psycopg2.connect(service='mangadex_clone_service')
+
+try:
+    DATABASE_URL = os.environ['DATABASE_URL']
+
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+except KeyError as e:
+    print("we are running offline")
+    conn = psycopg2.connect(service='mangamew_api_service')
 
 
 @app.get('/')
