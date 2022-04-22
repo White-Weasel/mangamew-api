@@ -3,4 +3,3 @@ import app
 
 
 app = app.app
-uvicorn.run(app)
