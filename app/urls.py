@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import Query
+from starlette.responses import RedirectResponse
 
 from app import app
 import psycopg2
@@ -19,7 +20,8 @@ except KeyError as e:
 
 @app.get('/')
 async def root():
-    return {"message": "Hello World"}
+    response = RedirectResponse(url='/docs')
+    return response
 
 
 @app.get('/manga')
