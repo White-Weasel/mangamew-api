@@ -8,7 +8,7 @@ import psycopg2
 from typing import List, Optional
 import os
 
-from models.Manga import MangaAttr
+from models.Manga import Manga
 from utls import QueryBuilder
 
 try:

@@ -2,7 +2,11 @@ from dataclasses import fields, dataclass, is_dataclass
 from typing import Union
 from uuid import UUID
 from datetime import datetime
+
+from psycopg2.extensions import cursor, connection
+
 from utls import get_all_dataclass_fields
+from utls import QueryBuilder
 
 
 @dataclass
@@ -79,12 +83,16 @@ class Manga(Object):
         self.id = input_dict['id']
         self.attributes.load(input_dict['attributes'])
 
-    def insert(self, cursor):
+    def insert(self, cur):
         pass
 
-    def select(self):
-        pass
+    @staticmethod
+    def select(cur: cursor, conn: connection = None):
+        sql = QueryBuilder.Table('manga').join('\"manga_altTitle\"', 'id', 'manga_id').join('\"manga_title\"', 'id', 'manga_id')
+        sql.prepare().select('id').text_has('title', 'Kaguya')
+        cur.execute(sql.query, sql.data)
+        result = cur.fetchall()
+        return result
 
     def select_json(self, condition: Union[dict, str], omit_null=False):
         pass
-
