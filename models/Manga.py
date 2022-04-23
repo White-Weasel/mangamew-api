@@ -1,12 +1,28 @@
+from dataclasses import fields, dataclass, is_dataclass
+from typing import Union
 from uuid import UUID
 from datetime import datetime
+from utls import get_all_dataclass_fields
 
 
+@dataclass
 class Attributes:
     def load(self, input_data: dict):
         for key in input_data.keys():
-            if hasattr(self, key):
-                setattr(self, key, input_data[key])
+            setattr(self, key, input_data[key])
+
+    def __setattr__(self, key, value):
+        if key in get_all_dataclass_fields(self):
+            object.__setattr__(self, key, value)
+        else:
+            e = AttributeError(f"Attribute \"{key}\" not allowed for class \"{type(self).__name__}\"")
+            raise e
+
+    def dict(self):
+        result = {}
+        for key in get_all_dataclass_fields(self):
+            result[key] = getattr(self, key)
+        return result
 
 
 class Object:
@@ -14,31 +30,39 @@ class Object:
     type: str
     attributes: Attributes
 
+    def dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'attributes': self.attributes.dict()
+        }
+
 
 class Tag(Object):
     def __init__(self):
         super().__init__()
+        self.type = 'tag'
 
 
 class MangaAttr(Attributes):
-    title: dict
-    altTitles: list[dict]
-    description: dict
-    links: dict
-    originalLanguage: str
-    lastVolume: str
-    lastChapter: str
-    publicationDemographic: str
-    status: str
-    year: int
-    contentRating: str
-    tags: list[Tag]
-    state: str
-    createdAt: datetime
-    updatedAt: datetime
-    availableTranslatedLanguages: list[str]
+    title: Union[dict, str] = None
+    altTitles: list[dict] = None
+    description: dict = None
+    links: dict = None
+    originalLanguage: str = None
+    lastVolume: str = None
+    lastChapter: str = None
+    publicationDemographic: str = None
+    status: str = None
+    year: int = None
+    contentRating: str = None
+    tags: list[Tag] = None
+    state: str = None
+    createdAt: datetime = None
+    updatedAt: datetime = None
+    availableTranslatedLanguages: list[str] = None
 
-    def __init__(self):
+    def __init__(self, manga_id=None):
         super().__init__()
 
 
@@ -49,9 +73,18 @@ class Manga(Object):
         super().__init__()
         self.id = manga_id
         self.type = 'manga'
-        if self.id is not None:
-            self.attributes: MangaAttr = MangaAttr()
+        self.attributes: MangaAttr = MangaAttr(self.id)
 
     def load(self, input_dict: dict):
         self.id = input_dict['id']
         self.attributes.load(input_dict['attributes'])
+
+    def insert(self, cursor):
+        pass
+
+    def select(self):
+        pass
+
+    def select_json(self, condition: Union[dict, str], omit_null=False):
+        pass
+

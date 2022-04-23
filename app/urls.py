@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Query
+from fastapi import Query, Response
 from starlette.responses import RedirectResponse
 
 from app import app
@@ -8,6 +8,8 @@ import psycopg2
 from typing import List, Optional
 import os
 
+from models.Manga import MangaAttr
+from utls import QueryBuilder
 
 try:
     DATABASE_URL = os.environ['DATABASE_URL']
@@ -25,15 +27,14 @@ async def root():
 
 
 @app.get('/manga')
-async def manga(ids: List[UUID] = Query(None)):
-    if ids is None:
-        return 'abc'
-    else:
+async def manga(response: Response, ids: Optional[List[UUID]] = Query(None), title: Optional[str] = None):
+    if len(ids) > 0:
         result = []
         cur = conn.cursor()
         for mid in ids:
             cur.callproc('get_manga_json_from_id', (str(mid),))
             result += cur.fetchall()[0]
+        response.headers["access-control-allow-origin"] = r"http://mangamew.vercel.app/"
         return {'data': result, 'total': len(result)}
 
 
