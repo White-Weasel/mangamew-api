@@ -26,6 +26,18 @@ async def root():
     return response
 
 
+@app.get('/manga/{manga_id}')
+async def manga_by_id(manga_id: UUID, response: Response):
+    cur = conn.cursor()
+    cur.callproc('get_manga_json_from_id', (manga_id,))
+    result = cur.fetchall()[0]
+    len_ = 0
+    if result is not None:
+        len_ = len(result)
+    response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
+    return {'data': result, 'total': len_}
+
+
 @app.get('/manga')
 async def manga(response: Response, ids: Optional[List[UUID]] = Query(None), title: Optional[str] = None):
     if len(ids) > 0:
