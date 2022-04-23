@@ -34,7 +34,7 @@ async def manga(response: Response, ids: Optional[List[UUID]] = Query(None), tit
         for mid in ids:
             cur.callproc('get_manga_json_from_id', (str(mid),))
             result += cur.fetchall()[0]
-        response.headers["access-control-allow-origin"] = "*"
+        response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
         return {'data': result, 'total': len(result)}
 
 
