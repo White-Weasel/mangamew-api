@@ -47,7 +47,7 @@ async def manga_by_id(manga_id: UUID, response: Response):
     len_ = 0
     if result is not None:
         len_ = len(result)
-    response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
+    response.headers["access-control-allow-origin"] = r"*"
     cur.close()
     conn.close()
     return {'_data': result, 'total': len_}
@@ -75,7 +75,7 @@ async def manga_list(response: Response, ids: Optional[UUID] = None, title: Opti
     cur.close()
     conn.close()
 
-    response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
+    response.headers["access-control-allow-origin"] = r"*"
     return result
 
 
@@ -98,7 +98,7 @@ async def mangas_statistics(response: Response, manga: List[UUID] = Query(None))
 
         cur.close()
         conn.close()
-    response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
+    response.headers["access-control-allow-origin"] = r"*"
     return result
 
 
