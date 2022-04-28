@@ -86,13 +86,5 @@ class Manga(Object):
     def insert(self, cur):
         pass
 
-    @staticmethod
-    def select(cur: cursor, conn: connection = None):
-        sql = QueryBuilder.Table('manga').join('\"manga_altTitle\"', 'id', 'manga_id').join('\"manga_title\"', 'id', 'manga_id')
-        sql.prepare().select('id').text_has('title', 'Kaguya')
-        cur.execute(sql.query, sql.data)
-        result = cur.fetchall()
-        return result
-
     def select_json(self, condition: Union[dict, str], omit_null=False):
         pass
