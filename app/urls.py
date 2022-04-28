@@ -17,7 +17,7 @@ def connect():
         DATABASE_URL = os.environ['DATABASE_URL']
 
         conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    except KeyError as e:
+    except KeyError:
         print("we are running offline")
         conn = psycopg2.connect(service='mangadex_clone_service')
 
@@ -38,22 +38,8 @@ async def root():
     return response
 
 
-@app.get('/manga/{manga_id}')
-async def manga_by_id(manga_id: UUID, response: Response):
-    conn = connect()
-    cur = conn.cursor()
-    cur.callproc('get_manga_json_from_id', (manga_id,))
-    result = cur.fetchall()[0]
-    len_ = 0
-    if result is not None:
-        len_ = len(result)
-    cur.close()
-    conn.close()
-    return {'_data': result, 'total': len_}
-
-
 @app.get('/manga')
-async def manga_list(response: Response, ids: Optional[UUID] = None, title: Optional[str] = None,
+async def manga_list(ids: Optional[UUID] = None, title: Optional[str] = None,
                      includedTags: Optional[list[UUID]] = Query(None), includedTagsMode: Optional[str] = 'and',
                      limit: Optional[int] = 10, offset: Optional[int] = 0):
     manga_sql = QueryBuilder.MangaQuery().limit(limit).offset(offset)
@@ -74,8 +60,32 @@ async def manga_list(response: Response, ids: Optional[UUID] = None, title: Opti
     cur.close()
     conn.close()
 
-
     return result
+
+
+@app.get('/manga/tag')
+async def all_tag():
+    conn = connect()
+    cur = conn.cursor()
+    cur.callproc('get_all_tags')
+    result = cur.fetchall()[0][0]
+    cur.close()
+    conn.close()
+    return result
+
+
+@app.get('/manga/{manga_id}')
+async def manga_by_id(manga_id: UUID):
+    conn = connect()
+    cur = conn.cursor()
+    cur.callproc('get_manga_json_from_id', (manga_id,))
+    result = cur.fetchall()[0]
+    len_ = 0
+    if result is not None:
+        len_ = len(result)
+    cur.close()
+    conn.close()
+    return {'_data': result, 'total': len_}
 
 
 @app.get('/author')
@@ -84,7 +94,7 @@ async def author(response: Response, ids: List[UUID] = Query(None)):
 
 
 @app.get('/statistics/manga')
-async def mangas_statistics(response: Response, manga: List[UUID] = Query(None)):
+async def mangas_statistics(manga: List[UUID] = Query(None)):
     result = {}
     if len(manga) > 0:
         conn = connect()
