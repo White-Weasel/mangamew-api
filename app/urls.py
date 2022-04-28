@@ -11,13 +11,18 @@ from typing import List, Optional
 import os
 from utls import QueryBuilder
 
-try:
-    DATABASE_URL = os.environ['DATABASE_URL']
 
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-except KeyError as e:
-    print("we are running offline")
-    conn = psycopg2.connect(service='mangadex_clone_service')
+def connect():
+    try:
+        DATABASE_URL = os.environ['DATABASE_URL']
+
+        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    except KeyError as e:
+        print("we are running offline")
+        conn = psycopg2.connect(service='mangadex_clone_service')
+
+    return conn
+
 
 psycopg2.extras.register_uuid()
 
@@ -35,6 +40,7 @@ async def root():
 
 @app.get('/manga/{manga_id}')
 async def manga_by_id(manga_id: UUID, response: Response):
+    conn = connect()
     cur = conn.cursor()
     cur.callproc('get_manga_json_from_id', (manga_id,))
     result = cur.fetchall()[0]
@@ -43,6 +49,7 @@ async def manga_by_id(manga_id: UUID, response: Response):
         len_ = len(result)
     response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
     cur.close()
+    conn.close()
     return {'_data': result, 'total': len_}
 
 
@@ -60,10 +67,13 @@ async def manga_list(response: Response, ids: Optional[UUID] = None, title: Opti
             manga_sql.has_all_tags(includedTags)
 
     manga_sql = QueryBuilder.MangaJsonQuery(manga_sql)
+
+    conn = connect()
     cur = conn.cursor()
     cur.execute(manga_sql.query, manga_sql.data)
     result = cur.fetchall()[0][0]
     cur.close()
+    conn.close()
 
     response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
     return result
@@ -78,6 +88,7 @@ async def author(response: Response, ids: List[UUID] = Query(None)):
 async def mangas_statistics(response: Response, manga: List[UUID] = Query(None)):
     result = {}
     if len(manga) > 0:
+        conn = connect()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute('SELECT * FROM manga_statistics WHERE manga_id = ANY(%s)', (manga,))
         re = cur.fetchall()
@@ -86,6 +97,7 @@ async def mangas_statistics(response: Response, manga: List[UUID] = Query(None))
         pass
 
         cur.close()
+        conn.close()
     response.headers["access-control-allow-origin"] = r"https://mangamew.vercel.app"
     return result
 
