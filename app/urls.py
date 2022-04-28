@@ -61,7 +61,7 @@ async def manga_list(response: Response, ids: Optional[UUID] = None, title: Opti
         manga_sql.has_id(ids)
     if title is not None:
         manga_sql.title_has(title)
-    if len(includedTags) > 0:
+    if includedTags is not None:
         if includedTagsMode.lower() == 'and':
             manga_sql.has_all_tags(includedTags)
 
