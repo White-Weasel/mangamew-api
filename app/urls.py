@@ -92,7 +92,6 @@ async def manga_list(ids: Optional[UUID] = Query(None, alias='ids[]'),
     if year is not None:
         manga_sql.where('year = %s', year)
     if order is not None:
-        # FIXME cant input dict in the https get
         manga_sql.order_by(order)
     if publicationDemographic is not None:
         manga_sql.has_demographics(publicationDemographic)
