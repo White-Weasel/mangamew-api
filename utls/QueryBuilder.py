@@ -71,15 +71,16 @@ class MangaQuery:
     select_clause: list[str]
     from_clauses: FromClause
     where_clause: list[str]
+    order_by_: dict
 
     def __init__(self):
+        self.order_by_ = {}
         self.select_clause = ['manga.id']
         self.from_clauses = FromClause(['manga'])
         self.where_clause = []
         self._data = []
         self.limit_ = 10
         self.offset_ = 0
-        pass
 
     def has_all_tags(self, tag_list: list):
         query = "select id from public.mangas_with_all_tags(%s)"
@@ -87,6 +88,17 @@ class MangaQuery:
                                     join_method='INNER JOIN')
         self.from_clauses.add_clause(tag_subquery)
         self.append_data(tag_list)
+        return self
+
+    def where(self, condion, data):
+        self.append_data(data)
+        self.where_clause.append(condion)
+        return self
+
+    def has_demographics(self, demos: list[str]):
+        query = f'"publicationDemographic" = ANY(%s) '
+        self.append_data(demos)
+        self.where_clause.append(query)
         return self
 
     def title_has(self, key: str):
@@ -110,18 +122,28 @@ class MangaQuery:
         self.offset_ = offset
         return self
 
+    def order_by(self, order: dict):
+        self.order_by_ = order
+        return self
+
     @property
     def query(self):
         result = f'SELECT '
         for sel in self.select_clause:
             result += f"{sel} "
         result += f'FROM {str(self.from_clauses)} '
+
         if len(self.where_clause) > 0:
             result += 'WHERE '
             for condition in self.where_clause:
                 result += f"{str(condition)} AND "
 
             result = result[:-4]
+
+        if len(self.order_by_) > 0:
+            for col in self.order_by_:
+                result += f"ORDER BY \"{col}\" {self.order_by_[col]} "
+
         result += f"LIMIT {self.limit_} "
         result += f"OFFSET {self.offset_} "
         return result

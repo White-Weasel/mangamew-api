@@ -1,15 +1,47 @@
 from uuid import UUID
 
-from fastapi import Query, Response
+from fastapi import Query, Response, Request, Depends
 from starlette.responses import RedirectResponse
 
 from app import app
 import psycopg2
 import psycopg2.extras
 from psycopg2.extensions import cursor
-from typing import List, Optional
+from typing import List, Optional, Dict
 import os
 from utls import QueryBuilder
+from pydantic import BaseModel
+
+
+def dict_param(req: Request) -> dict:
+    data = {}
+    try:
+        _query = dict((k, v) for k, v in req.query_params.items())
+        for _k in _query.keys():
+            dict_key = str(_k).replace('[', ' ').replace(']', ' ').split()
+            dict_ = dict_key[0]
+            key = dict_key[1]
+            val = _query.get(_k)
+
+            try:
+                d = data[dict_]
+            except KeyError:
+                data[dict_] = {}
+                d = data[dict_]
+            d[key] = val
+    except Exception as e:
+        print(e)
+    finally:
+        return data
+
+
+def orderParam(req: Request):
+    return dict_param(req).get('order')
+
+
+@app.get('/test')
+async def test_(order: dict = Depends(orderParam)):
+    return order
 
 
 def connect():
@@ -39,9 +71,16 @@ async def root():
 
 
 @app.get('/manga')
-async def manga_list(ids: Optional[UUID] = None, title: Optional[str] = None,
-                     includedTags: Optional[list[UUID]] = Query(None), includedTagsMode: Optional[str] = 'and',
-                     limit: Optional[int] = 10, offset: Optional[int] = 0):
+async def manga_list(ids: Optional[UUID] = Query(None, alias='ids[]'),
+                     title: Optional[str] = None,
+                     includedTags: Optional[List[UUID]] = Query(None, alias='includedTags[]'),
+                     includedTagsMode: Optional[str] = 'and',
+                     publicationDemographic: Optional[List[str]] = Query(None, alias='publicationDemographic[]'),
+                     year: Optional[int] = Query(None),
+                     limit: Optional[int] = 10,
+                     offset: Optional[int] = 0,
+                     order: Optional[Dict[str, str]] = Depends(orderParam)
+                     ):
     manga_sql = QueryBuilder.MangaQuery().limit(limit).offset(offset)
     if ids is not None:
         manga_sql.has_id(ids)
@@ -50,6 +89,13 @@ async def manga_list(ids: Optional[UUID] = None, title: Optional[str] = None,
     if includedTags is not None:
         if includedTagsMode.lower() == 'and':
             manga_sql.has_all_tags(includedTags)
+    if year is not None:
+        manga_sql.where('year = %s', year)
+    if order is not None:
+        # FIXME cant input dict in the https get
+        manga_sql.order_by(order)
+    if publicationDemographic is not None:
+        manga_sql.has_demographics(publicationDemographic)
 
     manga_sql = QueryBuilder.MangaJsonQuery(manga_sql)
 
@@ -99,20 +145,21 @@ async def mangas_statistics(manga: List[UUID] = Query(None)):
     if len(manga) > 0:
         conn = connect()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute('SELECT * FROM manga_statistics WHERE manga_id = ANY(%s)', (manga,))
+        cur.execute('select id, rating, "followedCount" as "follows" from manga WHERE id = ANY(%s)', (manga,))
         re = cur.fetchall()
         for row in re:
-            result[str(row['manga_id'])] = {'rating': {'average': row['rating']}, 'follows': row['follows']}
+            result[str(row['id'])] = {'rating': {'average': row['rating']}, 'follows': row['follows']}
         pass
 
         cur.close()
         conn.close()
 
+    result = {'statistics': result}
+
     return result
 
 
 @app.get('/statistics/manga/{manga_uuid}')
-async def manga_statistics(response: Response, manga_uuid: UUID):
-    # FIXME
-    result = await mangas_statistics(response, [manga_uuid, ])
+async def manga_statistics(manga_uuid: UUID):
+    result = await mangas_statistics([manga_uuid, ])
     return result
