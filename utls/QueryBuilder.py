@@ -2,9 +2,13 @@ from typing import Union
 from uuid import UUID
 
 
-class SqlStatement(str):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class SqlStatement:
+    def __init__(self, query: str, data):
+        self.query = query
+        self.data = data
+
+    def __repr__(self):
+        return self.query
 
 
 class WhereClauses:
@@ -13,7 +17,7 @@ class WhereClauses:
 
 
 class JoinSubquery:
-    query: str
+    query: SqlStatement
     join_method: str
     join_condition: str
     name: str
@@ -23,6 +27,7 @@ class JoinSubquery:
         self.join_method = join_method
         self.join_condition = join_condition
         self.name = name
+        self.data = self.query.data
 
     def __repr__(self):
         return f"{self.join_method} ({self.query}){self.name} ON {self.join_condition}"
@@ -52,6 +57,14 @@ class FromClause:
 
     def __add__(self, other):
         return self.add_clause(other)
+
+    @property
+    def data(self):
+        result = []
+        for table in self.tables:
+            if hasattr(table, 'data'):
+                result.append(table.data)
+        return result
 
 
 class QueryBuilder:
@@ -83,35 +96,60 @@ class MangaQuery:
         self.offset_ = 0
 
     def has_all_tags(self, tag_list: list):
-        query = "select id from public.mangas_with_all_tags(%s)"
+        query = SqlStatement("SELECT id FROM public.mangas_with_all_tags(%s)", tag_list)
         tag_subquery = JoinSubquery(query=query, name='has_tag', join_condition='manga.id = has_tag.id',
                                     join_method='INNER JOIN')
         self.from_clauses.add_clause(tag_subquery)
-        self.append_data(tag_list)
+        return self
+
+    def exclude_tags(self, tag_list: list):
+        query = "id NOT IN (SELECT id FROM public.mangas_with_all_tags(%s))"
+        return self.where(query, tag_list)
+
+    def has_author(self, author_id_list):
+        query = SqlStatement("SELECT manga_id FROM public.manga_author WHERE author_id=ANY(%s) AND type='author'",
+                             author_id_list)
+        author_subquery = JoinSubquery(query=query, name='has_author',
+                                       join_condition='manga.id = has_author.manga_id', join_method='INNER JOIN')
+        self.from_clauses.add_clause(author_subquery)
+        return self
+
+    def has_artist(self, artists_list):
+        query = SqlStatement("SELECT manga_id FROM public.manga_author WHERE author_id=ANY(%s) AND type='artist'",
+                             artists_list)
+        author_subquery = JoinSubquery(query=query, name='has_artist',
+                                       join_condition='manga.id = has_artist.manga_id', join_method='INNER JOIN')
+        self.from_clauses.add_clause(author_subquery)
         return self
 
     def where(self, condion, data):
-        self.append_data(data)
-        self.where_clause.append(condion)
+        statement = SqlStatement(condion, data)
+        self.where_clause.append(statement)
         return self
 
     def has_demographics(self, demos: list[str]):
-        query = f'"publicationDemographic" = ANY(%s) '
-        self.append_data(demos)
+        query = SqlStatement(f'"publicationDemographic" = ANY(%s) ', demos)
         self.where_clause.append(query)
         return self
 
     def title_has(self, key: str):
-        query = "select id from public.manga_title_has(%s)"
+        query = SqlStatement("select id from public.manga_title_has(%s)", key)
         title_subquery = JoinSubquery(query=query, name='has_title', join_condition='manga.id = has_title.id',
                                       join_method="INNER JOIN")
         self.from_clauses.add_clause(title_subquery)
-        self.append_data(key)
+        return self
+
+    def has_translated_language(self, languages: list):
+        query = SqlStatement("SELECT id FROM public.mangas_with_translated_language(%s)", languages)
+        translated_language_subquery = JoinSubquery(query=query, name='has_translated_language',
+                                                    join_condition='manga.id = has_translated_language.id',
+                                                    join_method='INNER JOIN')
+        self.from_clauses.add_clause(translated_language_subquery)
         return self
 
     def has_id(self, key_id: UUID):
-        self.where_clause.append('manga.id = %s')
-        self.append_data(key_id)
+        statement = SqlStatement('manga.id = %s', key_id)
+        self.where_clause.append(statement)
         return self
 
     def limit(self, limit):
@@ -131,6 +169,7 @@ class MangaQuery:
         result = f'SELECT '
         for sel in self.select_clause:
             result += f"{sel} "
+
         result += f'FROM {str(self.from_clauses)} '
 
         if len(self.where_clause) > 0:
@@ -150,7 +189,13 @@ class MangaQuery:
 
     @property
     def data(self):
-        return self._data
+        result = self.from_clauses.data
+
+        if len(self.where_clause) > 0:
+            for condition in self.where_clause:
+                if hasattr(condition, 'data'):
+                    result.append(condition.data)
+        return result
 
     def append_data(self, new_data):
         self._data.append(new_data)
@@ -190,6 +235,4 @@ class MangaJsonQuery(MangaQuery):
                 result += f"{str(condition)} AND "
 
             result = result[:-4]
-        result += f"LIMIT {self.limit_} "
-        result += f"OFFSET {self.offset_} "
         return result
