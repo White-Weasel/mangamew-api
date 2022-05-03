@@ -83,7 +83,7 @@ class MangaQuery:
     offset_: int
     select_clause: list[str]
     from_clauses: FromClause
-    where_clause: list[str]
+    where_clause: list[Union[str, SqlStatement]]
     order_by_: dict
 
     def __init__(self):
@@ -147,8 +147,8 @@ class MangaQuery:
         self.from_clauses.add_clause(translated_language_subquery)
         return self
 
-    def has_id(self, key_id: UUID):
-        statement = SqlStatement('manga.id = %s', key_id)
+    def has_id(self, key_id: list[UUID]):
+        statement = SqlStatement('manga.id = ANY(%s)', key_id)
         self.where_clause.append(statement)
         return self
 

@@ -10,7 +10,8 @@ from psycopg2.extensions import cursor
 from typing import List, Optional, Dict
 import os
 from utls import QueryBuilder
-from pydantic import BaseModel
+
+psycopg2.extras.register_uuid()
 
 
 def dict_param(req: Request) -> dict:
@@ -42,11 +43,6 @@ def orderParam(req: Request):
     return dict_param(req).get('order')
 
 
-@app.get('/test')
-async def test_(order: dict = Depends(orderParam)):
-    return order
-
-
 def connect():
     try:
         DATABASE_URL = os.environ['DATABASE_URL']
@@ -57,9 +53,6 @@ def connect():
         conn = psycopg2.connect(service='mangadex_clone_service')
 
     return conn
-
-
-psycopg2.extras.register_uuid()
 
 
 def call_sql_function(cur: psycopg2.extensions.cursor, function_name, data):
@@ -74,7 +67,7 @@ async def root():
 
 
 @app.get('/manga')
-async def manga_list(ids: Optional[UUID] = Query(None, alias='ids[]'),
+async def manga_list(ids: Optional[list[UUID]] = Query(None, alias='ids[]'),
                      title: Optional[str] = None,
                      includedTags: Optional[List[UUID]] = Query(None, alias='includedTags[]'),
                      includedTagsMode: Optional[str] = 'and',
