@@ -2,9 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
-origins = [
-    r"https://mangamew.vercel.app/",
-]
+origins = ['*']
 
 app.add_middleware(
     CORSMiddleware,
