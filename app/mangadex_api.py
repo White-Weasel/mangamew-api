@@ -1,7 +1,7 @@
 import json
 
 import requests
-from fastapi import Request, Response, status
+from fastapi import Request, Response
 from fastapi.responses import HTMLResponse
 from app import app
 
@@ -23,7 +23,7 @@ async def test_path(req_path: str, req: Request, response: Response):
     except Exception as e:
         return {'error': str(e)}
 
-
+"""
 @app.post('/{req_path:path}')
 async def test_path(req_path: str, req: Request, response: Response):
     try:
@@ -37,3 +37,4 @@ async def test_path(req_path: str, req: Request, response: Response):
             return HTMLResponse(result.content)
     except Exception as e:
         return {'error': str(e)}
+"""
