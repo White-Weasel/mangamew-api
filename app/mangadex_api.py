@@ -6,10 +6,6 @@ from fastapi.responses import HTMLResponse
 from app import app
 
 
-def get_all_query_params(req: Request) -> dict:
-    pass
-
-
 @app.get('/{req_path:path}')
 async def get_proxy(req_path: str, req: Request, response: Response):
     try:
