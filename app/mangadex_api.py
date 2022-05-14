@@ -22,6 +22,7 @@ async def get_proxy(req_path: str, req: Request, response: Response):
             return result.json()
         else:
             # return {'error': 'You are trying to read non-json content-type which we are currently not supporting'}
+            response.headers['location'] = r'https://api.mangadex.org/docs.html'
             return HTMLResponse(result.content)
     except Exception as e:
         return {'error': str(e)}
