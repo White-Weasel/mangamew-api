@@ -26,13 +26,16 @@ async def get_proxy(req_path: str, req: Request, response: Response):
     except Exception as e:
         return {'error': str(e)}
 
-"""
+
 @app.post('/{req_path:path}')
 async def test_path(req_path: str, req: Request, response: Response):
     try:
         url = fr"https://api.mangadex.org/{req_path}"
         data = json.dumps(await req.json())
-        result = requests.post(url, data=data)
+        header = dict(req.headers)
+        header['host'] = 'api.mangadex.org'
+        header['Content-Type'] = r'application/json'
+        result = requests.post(url, data=data, headers=header)
         if 'json' in result.headers['content-type']:
             response.status_code = result.status_code
             return result.json()
@@ -40,4 +43,3 @@ async def test_path(req_path: str, req: Request, response: Response):
             return HTMLResponse(result.content)
     except Exception as e:
         return {'error': str(e)}
-"""
