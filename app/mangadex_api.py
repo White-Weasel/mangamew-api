@@ -45,7 +45,7 @@ async def test_path(req_path: str, req: Request, response: Response):
         return {'error': str(e)}
 
 
-@app.post('/{req_path:path}')
+@app.delete('/{req_path:path}')
 async def test_path(req_path: str, req: Request, response: Response):
     try:
         url = fr"https://api.mangadex.org/{req_path}"
