@@ -14,7 +14,7 @@ def get_all_query_params(req: Request) -> dict:
 async def test_path(req_path: str, req: Request, response: Response):
     try:
         url = fr"https://api.mangadex.org/{req_path}?{str(req.query_params)}"
-        result = requests.get(url)
+        result = requests.get(url, headers=dict(req.headers))
         if 'json' in result.headers['content-type']:
             response.status_code = result.status_code
             return result.json()
