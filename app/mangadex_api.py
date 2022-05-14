@@ -14,8 +14,9 @@ def get_all_query_params(req: Request) -> dict:
 async def get_proxy(req_path: str, req: Request, response: Response):
     try:
         url = fr"https://api.mangadex.org/{req_path}?{str(req.query_params)}"
-        result = requests.get(url, headers=dict(req.headers))
-        print(dict(req.headers))
+        header = dict(req.headers)
+        header['host'] = 'api.mangadex.org'
+        result = requests.get(url, headers=header)
         if 'json' in result.headers['content-type']:
             response.status_code = result.status_code
             return result.json()
