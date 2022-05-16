@@ -62,8 +62,7 @@ def call_sql_function(cur: psycopg2.extensions.cursor, function_name, data):
 
 @app.get('/')
 async def root():
-    response = RedirectResponse(url='/docs')
-    return response
+    return RedirectResponse(url='/docs')
 
 
 @app.get('/manga')
@@ -151,13 +150,15 @@ async def manga_by_id(manga_id: UUID):
     return {'_data': result, 'total': len_}
 
 
+# noinspection PyUnusedLocal
 @app.get('/author')
 async def author(response: Response, ids: List[UUID] = Query(None)):
-    pass
+    # TODO
+    return {'error': "this endpoint is currently unavailable"}
 
 
 @app.get('/statistics/manga')
-async def mangas_statistics(manga: List[UUID] = Query(None)):
+async def mangas_statistics(manga: List[UUID] = Query(None, alias='manga[]')):
     result = {}
     if len(manga) > 0:
         conn = connect()
@@ -165,6 +166,7 @@ async def mangas_statistics(manga: List[UUID] = Query(None)):
         cur.execute('select id, rating, "followedCount" as "follows" from manga WHERE id = ANY(%s)', (manga,))
         re = cur.fetchall()
         for row in re:
+            # noinspection PyTypeChecker
             result[str(row['id'])] = {'rating': {'average': row['rating']}, 'follows': row['follows']}
         pass
 
