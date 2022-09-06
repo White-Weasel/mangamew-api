@@ -50,7 +50,7 @@ def connect():
         conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     except KeyError:
         print("we are running offline")
-        conn = psycopg2.connect(service='mangadex_clone_service')
+        conn = psycopg2.connect(service='mangaMew_service')
 
     return conn
 
